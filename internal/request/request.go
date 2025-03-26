@@ -1,6 +1,7 @@
 package request
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -16,30 +17,67 @@ type RequestLine struct {
 	Method        string
 }
 
+const crlf = "\r\n"
+
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	res := Request{}
-	b, err := io.ReadAll(reader)
+	rawBytes, err := io.ReadAll(reader)
 	if err != nil {
-		return &res, err
+		return nil, err
 	}
-	raw_splitted := strings.Split(string(b), "\r\n")
-	splitted := strings.Split(string(raw_splitted[0]), " ")
-	if len(splitted) != 3 {
-		arg_err := fmt.Errorf("invalid amount of arguments")
-		return &res, arg_err
+	requestLine, err := parseRequestLine(rawBytes)
+	if err != nil {
+		return nil, err
 	}
-	method, req_target, http_v_str := splitted[0], splitted[1], splitted[2]
-	http_v_splitted := strings.Split(http_v_str, "/")
-	if method != strings.ToUpper(method) {
-		meth_err := fmt.Errorf("method format error")
-		return &res, meth_err
+	return &Request{
+		RequestLine: *requestLine,
+	}, nil
+}
+
+func parseRequestLine(data []byte) (*RequestLine, error) {
+	idx := bytes.Index(data, []byte(crlf))
+	if idx == -1 {
+		return nil, fmt.Errorf("could not find CRLF in request-line")
 	}
-	if len(http_v_splitted) <= 1 || http_v_splitted[1] != "1.1" {
-		ver_err := fmt.Errorf("invalid http version")
-		return &res, ver_err
+	requestLineText := string(data[:idx])
+	requestLine, err := requestLineFromString(requestLineText)
+	if err != nil {
+		return nil, err
 	}
-	res.RequestLine.HttpVersion = http_v_splitted[1]
-	res.RequestLine.Method = method
-	res.RequestLine.RequestTarget = req_target
-	return &res, nil
+	return requestLine, nil
+}
+
+func requestLineFromString(str string) (*RequestLine, error) {
+	parts := strings.Split(str, " ")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("poorly formatted request-line: %s", str)
+	}
+
+	method := parts[0]
+	for _, c := range method {
+		if c < 'A' || c > 'Z' {
+			return nil, fmt.Errorf("invalid method: %s", method)
+		}
+	}
+
+	requestTarget := parts[1]
+
+	versionParts := strings.Split(parts[2], "/")
+	if len(versionParts) != 2 {
+		return nil, fmt.Errorf("malformed start-line: %s", str)
+	}
+
+	httpPart := versionParts[0]
+	if httpPart != "HTTP" {
+		return nil, fmt.Errorf("unrecognized HTTP-version: %s", httpPart)
+	}
+	version := versionParts[1]
+	if version != "1.1" {
+		return nil, fmt.Errorf("unrecognized HTTP-version: %s", version)
+	}
+
+	return &RequestLine{
+		Method:        method,
+		RequestTarget: requestTarget,
+		HttpVersion:   versionParts[1],
+	}, nil
 }
