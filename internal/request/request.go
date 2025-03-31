@@ -28,6 +28,7 @@ type requestState int
 const (
 	requestStateInitialized requestState = iota
 	requestStateParsingHeaders
+	requestStateParsingBody
 	requestStateDone
 )
 
@@ -71,6 +72,15 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		}
 	}
 	return req, nil
+}
+
+func (r *Request) parseRequestBody(data []byte) (int, error) {
+	idx := bytes.Index(data, []byte(crlf))
+	if idx == -1 {
+		return 0, nil
+	}
+	r.Body = data[:idx]
+	return idx + 2, nil
 }
 
 func (r *Request) parseRequestHeader(data []byte) (int, bool, error) {
@@ -174,7 +184,23 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 			return 0, nil
 		}
 		if done {
+			r.state = requestStateParsingBody
+		}
+		return n, nil
+	case requestStateParsingBody:
+		c_len := r.Headers.Get("content-length")
+		if c_len == "" {
 			r.state = requestStateDone
+			return 0, nil
+		}
+		n, err := r.parseRequestBody(data)
+		if err != nil {
+			// something actually went wrong
+			return 0, err
+		}
+		if n == 0 {
+			// just need more data
+			return 0, nil
 		}
 		return n, nil
 	case requestStateDone:
