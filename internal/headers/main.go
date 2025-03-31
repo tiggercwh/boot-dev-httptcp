@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+	"unicode"
 )
 
 const crlf = "\r\n"
+const specials = "!#$%&'*+-.^_`|~"
 
 type Headers map[string]string
 
@@ -34,8 +36,17 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 	value := bytes.TrimSpace(parts[1])
 	key = strings.TrimSpace(key)
+	low_key := strings.ToLower(key)
 
-	h.Set(key, string(value))
+	badchar_key := strings.ContainsFunc(key, func(r rune) bool {
+		return !(unicode.IsLetter(r) || unicode.IsDigit(r) || strings.ContainsRune(specials, r))
+	})
+
+	if badchar_key {
+		return 0, false, fmt.Errorf("invalid header name: %s", key)
+	}
+
+	h.Set(low_key, string(value))
 	return idx + 2, false, nil
 }
 
