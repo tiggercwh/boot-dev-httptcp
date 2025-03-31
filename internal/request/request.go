@@ -11,6 +11,7 @@ import (
 )
 
 type Request struct {
+	Body        []byte
 	RequestLine RequestLine
 	headers.Headers
 	state requestState
