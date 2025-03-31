@@ -31,7 +31,7 @@ const crlf = "\r\n"
 const bufferSize = 8
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	buf := make([]byte, bufferSize, bufferSize)
+	buf := make([]byte, bufferSize)
 	readToIndex := 0
 	req := &Request{
 		state: requestStateInitialized,
@@ -45,7 +45,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 		numBytesRead, err := reader.Read(buf[readToIndex:])
 		if err != nil {
-			if errors.Is(io.EOF, err) {
+			if errors.Is(err, io.EOF) {
 				req.state = requestStateDone
 				break
 			}
@@ -58,8 +58,10 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 			return nil, err
 		}
 
-		copy(buf, buf[numBytesParsed:])
-		readToIndex -= numBytesParsed
+		if numBytesParsed != 0 {
+			copy(buf, buf[numBytesParsed:])
+			readToIndex -= numBytesParsed
+		}
 	}
 	return req, nil
 }
