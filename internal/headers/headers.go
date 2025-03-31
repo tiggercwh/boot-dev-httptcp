@@ -51,5 +51,10 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 }
 
 func (h Headers) Set(key, value string) {
-	h[key] = value
+	cur, exist := h[key]
+	if exist {
+		h[key] = cur + fmt.Sprintf(", %s", value)
+	} else {
+		h[key] = value
+	}
 }
