@@ -133,14 +133,15 @@ func requestLineFromString(str string) (*RequestLine, error) {
 
 func (r *Request) parse(data []byte) (int, error) {
 	totalBytesParsed := 0
-	count := 0
-	for r.state != requestStateDone && count < 5 {
+	for r.state != requestStateDone {
 		n, err := r.parseSingle(data[totalBytesParsed:])
 		if err != nil {
 			return 0, err
 		}
 		totalBytesParsed += n
-		count++
+		if n == 0 {
+			break
+		}
 	}
 	return totalBytesParsed, nil
 }
