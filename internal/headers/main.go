@@ -20,7 +20,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, false, nil
 	}
 	if idx == 0 {
-		return 0, true, nil
+		return 2, true, nil
 	}
 	header := string(data[:idx])
 	trimmed := strings.TrimSpace(header) //Host: localhost:42069, Host:localhost:42069
