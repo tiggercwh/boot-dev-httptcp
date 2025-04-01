@@ -196,14 +196,6 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 			return 0, err
 		}
 		n, err := r.parseRequestBody(data)
-		if err != nil {
-			// something actually went wrong
-			return 0, err
-		}
-		if n == 0 {
-			// just need more data
-			return 0, nil
-		}
 		if len(r.Body) > clen {
 			return n, fmt.Errorf("invalid body length")
 		}
