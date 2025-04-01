@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/bootdotdev/learn-http-protocol/internal/headers"
@@ -75,12 +76,8 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 }
 
 func (r *Request) parseRequestBody(data []byte) (int, error) {
-	idx := bytes.Index(data, []byte(crlf))
-	if idx == -1 {
-		return 0, nil
-	}
-	r.Body = data[:idx]
-	return idx + 2, nil
+	r.Body = append(r.Body, data...)
+	return len(data), nil
 }
 
 func (r *Request) parseRequestHeader(data []byte) (int, bool, error) {
@@ -185,13 +182,18 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 		}
 		if done {
 			r.state = requestStateParsingBody
+			return n, nil
 		}
 		return n, nil
 	case requestStateParsingBody:
-		c_len := r.Headers.Get("content-length")
-		if c_len == "" {
+		raw_clen := r.Headers.Get("content-length")
+		if raw_clen == "" {
 			r.state = requestStateDone
 			return 0, nil
+		}
+		clen, err := strconv.Atoi(raw_clen)
+		if err != nil {
+			return 0, err
 		}
 		n, err := r.parseRequestBody(data)
 		if err != nil {
@@ -201,6 +203,12 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 		if n == 0 {
 			// just need more data
 			return 0, nil
+		}
+		if len(r.Body) > clen {
+			return n, fmt.Errorf("invalid body length")
+		}
+		if len(r.Body) == clen {
+			r.state = requestStateDone
 		}
 		return n, nil
 	case requestStateDone:
