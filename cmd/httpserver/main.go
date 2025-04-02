@@ -10,28 +10,12 @@ import (
 	"github.com/bootdotdev/learn-http-protocol/internal/request"
 	"github.com/bootdotdev/learn-http-protocol/internal/response"
 	"github.com/bootdotdev/learn-http-protocol/internal/server"
-	s "github.com/bootdotdev/learn-http-protocol/internal/server"
 )
 
 const port = 42069
 
 func main() {
-	server, err := s.Serve(port, func(w io.Writer, req *request.Request) *server.HandlerError {
-		if req.RequestLine.RequestTarget == "/yourproblem" {
-			return &server.HandlerError{
-				Message:    "Your problem is not my problem\n",
-				StatusCode: response.StatusBadRequest,
-			}
-		}
-		if req.RequestLine.RequestTarget == "/myproblem" {
-			return &server.HandlerError{
-				Message:    "Woopsie, my bad\n",
-				StatusCode: response.StatusInternalError,
-			}
-		}
-		w.Write([]byte("All good, frfr\n"))
-		return nil
-	})
+	server, err := server.Serve(port, handler)
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
@@ -42,4 +26,21 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 	log.Println("Server gracefully stopped")
+}
+
+func handler(w io.Writer, req *request.Request) *server.HandlerError {
+	if req.RequestLine.RequestTarget == "/yourproblem" {
+		return &server.HandlerError{
+			StatusCode: response.StatusBadRequest,
+			Message:    "Your problem is not my problem\n",
+		}
+	}
+	if req.RequestLine.RequestTarget == "/myproblem" {
+		return &server.HandlerError{
+			StatusCode: response.StatusInternalError,
+			Message:    "Woopsie, my bad\n",
+		}
+	}
+	w.Write([]byte("All good, frfr\n"))
+	return nil
 }
