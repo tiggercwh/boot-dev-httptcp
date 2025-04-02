@@ -5,6 +5,8 @@ import (
 	"log"
 	"net"
 	"sync/atomic"
+
+	"github.com/bootdotdev/learn-http-protocol/internal/response"
 )
 
 type Server struct {
@@ -43,11 +45,9 @@ func (s *Server) Listen() {
 
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
-	response := "HTTP/1.1 200 OK\r\n" + // Status line
-		"Content-Type: text/plain\r\n" + // Example header
-		"\r\n" + // Blank line to separate headers from the body
-		"Hello World!\n" // Body
-	conn.Write([]byte(response))
+	response.WriteStatusLine(conn, response.StatusOK)
+	h := response.GetDefaultHeaders(0)
+	response.WriteHeaders(conn, h)
 }
 
 // Closes the listener and the server
