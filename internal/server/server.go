@@ -1,25 +1,47 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"sync/atomic"
 
+	"github.com/bootdotdev/learn-http-protocol/internal/request"
 	"github.com/bootdotdev/learn-http-protocol/internal/response"
 )
 
 type Server struct {
+	Handler
 	Listener net.Listener
 	IsClosed atomic.Bool
 }
 
-func Serve(port int) (*Server, error) {
+type HandlerError struct {
+	Message string
+	response.StatusCode
+}
+
+type Handler func(w io.Writer, req *request.Request) *HandlerError
+
+func WriteHandlerError(w io.Writer, herr *HandlerError) {
+	if herr == nil {
+		return
+	}
+	response.WriteStatusLine(w, herr.StatusCode)
+	headers := response.GetDefaultHeaders(len(herr.Message))
+	response.WriteHeaders(w, headers)
+	w.Write([]byte(herr.Message))
+}
+
+func Serve(port int, handler Handler) (*Server, error) {
 	l, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
 		return nil, err
 	}
 	s := &Server{
+		Handler:  handler,
 		Listener: l,
 	}
 	s.IsClosed.Store(false)
@@ -45,9 +67,20 @@ func (s *Server) Listen() {
 
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
+	req, err := request.RequestFromReader(conn)
+	if err != nil {
+		log.Fatalln("fail to parse req")
+	}
+	buf := bytes.NewBuffer(make([]byte, 0))
+	herr := s.Handler(buf, req)
+	if herr != nil {
+		WriteHandlerError(conn, herr)
+		return
+	}
 	response.WriteStatusLine(conn, response.StatusOK)
-	h := response.GetDefaultHeaders(0)
+	h := response.GetDefaultHeaders(buf.Len())
 	response.WriteHeaders(conn, h)
+	conn.Write(buf.Bytes())
 }
 
 // Closes the listener and the server
