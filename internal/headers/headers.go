@@ -57,10 +57,18 @@ func (h Headers) Get(key string) (string, bool) {
 }
 
 func (h Headers) Set(key, value string) {
-	cur, exist := h[key]
-	if exist {
-		h[key] = cur + fmt.Sprintf(", %s", value)
-	} else {
-		h[key] = value
+	key = strings.ToLower(key)
+	v, ok := h[key]
+	if ok {
+		value = strings.Join([]string{
+			v,
+			value,
+		}, ", ")
 	}
+	h[key] = value
+}
+
+func (h Headers) Override(key, value string) {
+	key = strings.ToLower(key)
+	h[key] = value
 }
