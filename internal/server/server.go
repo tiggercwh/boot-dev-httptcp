@@ -74,7 +74,7 @@ func (s *Server) handle(conn net.Conn) {
 	req, err := request.RequestFromReader(conn)
 	if err != nil {
 		hErr := &HandlerError{
-			StatusCode: response.StatusBadRequest,
+			StatusCode: response.StatusCodeBadRequest,
 			Message:    err.Error(),
 		}
 		hErr.Write(conn)
@@ -87,7 +87,7 @@ func (s *Server) handle(conn net.Conn) {
 		return
 	}
 	b := buf.Bytes()
-	response.WriteStatusLine(conn, response.StatusOK)
+	response.WriteStatusLine(conn, response.StatusCodeSuccess)
 	headers := response.GetDefaultHeaders(len(b))
 	response.WriteHeaders(conn, headers)
 	conn.Write(b)

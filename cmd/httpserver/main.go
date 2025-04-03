@@ -31,13 +31,13 @@ func main() {
 func handler(w io.Writer, req *request.Request) *server.HandlerError {
 	if req.RequestLine.RequestTarget == "/yourproblem" {
 		return &server.HandlerError{
-			StatusCode: response.StatusBadRequest,
+			StatusCode: response.StatusCodeBadRequest,
 			Message:    "Your problem is not my problem\n",
 		}
 	}
 	if req.RequestLine.RequestTarget == "/myproblem" {
 		return &server.HandlerError{
-			StatusCode: response.StatusInternalError,
+			StatusCode: response.StatusCodeInternalServerError,
 			Message:    "Woopsie, my bad\n",
 		}
 	}
