@@ -16,7 +16,6 @@ import (
 )
 
 const port = 42069
-const httpbin_prefix = "/httpbin/stream/"
 
 func main() {
 	server, err := server.Serve(port, handler)
@@ -32,51 +31,13 @@ func main() {
 	log.Println("Server gracefully stopped")
 }
 
-// and strings.TrimPrefix
 func handler(w *response.Writer, req *request.Request) {
-	if strings.HasPrefix(req.RequestLine.RequestTarget, httpbin_prefix) {
-		fmt.Println("here!!")
-		numstr := strings.TrimPrefix(req.RequestLine.RequestTarget, httpbin_prefix)
-		h := response.GetDefaultChunkHeaders()
-		fmt.Println(h)
-		w.WriteHeaders(h)
-		fmt.Println("req!!")
-		res, err := http.Get(fmt.Sprintf("https://httpbin.org/stream/%s", numstr))
-		if err != nil {
-			handler500(w, req)
-			return
-		}
-		fmt.Println("req made!!")
-		// buf := make([]byte,1024)
-		// for {
-		// 	n,err:= res.Body.Read(buf)
-		// 	w.WriteChunkedBody(n)
-		// 	buf = buf[:0]
-		// }
-		buf := make([]byte, 1024)
-		for {
-			n, err := res.Body.Read(buf)
-			if n > 0 {
-				// Only send actual data read
-				_, writeErr := w.WriteChunkedBody(buf[:n])
-				if writeErr != nil {
-					break // client disconnected or other issue
-				}
-			}
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				// Log or return 500 optionally
-				break
-			}
-		}
-
-		// Final chunk to indicate end of body
-		w.WriteChunkedBodyDone()
+	if strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin") {
+		proxyHandler(w, req)
+		return
 	}
 	if req.RequestLine.RequestTarget == "/yourproblem" {
-		handler400(w, req)
+		handler200(w, req)
 		return
 	}
 	if req.RequestLine.RequestTarget == "/myproblem" {
@@ -141,4 +102,47 @@ func handler200(w *response.Writer, _ *request.Request) {
 	w.WriteHeaders(h)
 	w.WriteBody(body)
 	return
+}
+
+func proxyHandler(w *response.Writer, req *request.Request) {
+	target := strings.TrimPrefix(req.RequestLine.RequestTarget, "/httpbin/")
+	url := "https://httpbin.org/" + target
+	fmt.Println("Proxying to", url)
+	resp, err := http.Get(url)
+	if err != nil {
+		handler500(w, req)
+		return
+	}
+	defer resp.Body.Close()
+
+	w.WriteStatusLine(response.StatusCodeSuccess)
+	h := response.GetDefaultHeaders(0)
+	h.Override("Transfer-Encoding", "chunked")
+	h.Remove("Content-Length")
+	w.WriteHeaders(h)
+
+	const maxChunkSize = 1024
+	buffer := make([]byte, maxChunkSize)
+	for {
+		n, err := resp.Body.Read(buffer)
+		fmt.Println("Read", n, "bytes")
+		if n > 0 {
+			_, err = w.WriteChunkedBody(buffer[:n])
+			if err != nil {
+				fmt.Println("Error writing chunked body:", err)
+				break
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			fmt.Println("Error reading response body:", err)
+			break
+		}
+	}
+	_, err = w.WriteChunkedBodyDone()
+	if err != nil {
+		fmt.Println("Error writing chunked body done:", err)
+	}
 }

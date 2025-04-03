@@ -7,124 +7,91 @@ import (
 	"github.com/bootdotdev/learn-http-protocol/internal/headers"
 )
 
-type WriterState int
+type writerState int
 
 const (
-	WritingStatusLine WriterState = iota
-	WritingHeaders
-	WritingBody
-	Done
+	writerStateStatusLine writerState = iota
+	writerStateHeaders
+	writerStateBody
 )
 
 type Writer struct {
-	io.Writer
-	WriterState
+	writerState writerState
+	writer      io.Writer
 }
 
 func NewWriter(w io.Writer) *Writer {
 	return &Writer{
-		Writer:      w,
-		WriterState: WritingStatusLine,
+		writerState: writerStateStatusLine,
+		writer:      w,
 	}
 }
 
-func (w *Writer) WriteHeaders(headers headers.Headers) error {
-	if w.WriterState != WritingHeaders {
-		return fmt.Errorf("invalid writer state: %v", w.WriterState)
+func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
+	if w.writerState != writerStateStatusLine {
+		return fmt.Errorf("cannot write status line in state %d", w.writerState)
 	}
+	defer func() { w.writerState = writerStateHeaders }()
+	_, err := w.writer.Write(getStatusLine(statusCode))
+	return err
+}
 
-	defer func() {
-		w.WriterState = WritingBody
-	}()
-	for k, v := range headers {
-		_, err := w.Write([]byte(fmt.Sprintf("%s: %s\r\n", k, v)))
+func (w *Writer) WriteHeaders(h headers.Headers) error {
+	if w.writerState != writerStateHeaders {
+		return fmt.Errorf("cannot write headers in state %d", w.writerState)
+	}
+	defer func() { w.writerState = writerStateBody }()
+	for k, v := range h {
+		_, err := w.writer.Write([]byte(fmt.Sprintf("%s: %s\r\n", k, v)))
 		if err != nil {
 			return err
 		}
 	}
-	_, err := w.Write([]byte("\r\n"))
-	return err
-}
-
-func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
-	if w.WriterState != WritingStatusLine {
-		return fmt.Errorf("invalid writer state: %v", w.WriterState)
-	}
-
-	defer func() {
-		w.WriterState = WritingHeaders
-	}()
-	_, err := w.Write(getStatusLine(statusCode))
+	_, err := w.writer.Write([]byte("\r\n"))
 	return err
 }
 
 func (w *Writer) WriteBody(p []byte) (int, error) {
-	if w.WriterState != WritingBody {
-		return 0, fmt.Errorf("invalid writer state: %v", w.WriterState)
+	if w.writerState != writerStateBody {
+		return 0, fmt.Errorf("cannot write body in state %d", w.writerState)
 	}
-	defer func() {
-		w.WriterState = Done
-	}()
-	n, err := w.Write(p)
-	return n, err
+	return w.writer.Write(p)
 }
 
 func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
-	var total int
-
-	// 1. Write chunk size in hex + \r\n
-	header := fmt.Sprintf("%X\r\n", len(p))
-	n, err := w.Write([]byte(header))
-	total += n
-	if err != nil {
-		return total, err
+	if w.writerState != writerStateBody {
+		return 0, fmt.Errorf("cannot write body in state %d", w.writerState)
 	}
+	chunkSize := len(p)
 
-	// 2. Write the actual data
-	n, err = w.Write(p)
-	total += n
+	nTotal := 0
+	n, err := fmt.Fprintf(w.writer, "%x\r\n", chunkSize)
 	if err != nil {
-		return total, err
+		return nTotal, err
 	}
+	nTotal += n
 
-	// 3. Write trailing \r\n
-	n, err = w.Write([]byte("\r\n"))
-	total += n
-	return total, err
+	n, err = w.writer.Write(p)
+	if err != nil {
+		return nTotal, err
+	}
+	nTotal += n
+
+	n, err = w.writer.Write([]byte("\r\n"))
+	if err != nil {
+		return nTotal, err
+	}
+	nTotal += n
+	return nTotal, nil
 }
 
 func (w *Writer) WriteChunkedBodyDone() (int, error) {
-	// Write the final 0-length chunk: "0\r\n\r\n"
-	done := []byte("0\r\n\r\n")
-	return w.Write(done)
+	if w.writerState != writerStateBody {
+		return 0, fmt.Errorf("cannot write body in state %d", w.writerState)
+	}
+	n, err := w.writer.Write([]byte("0\r\n\r\n"))
+	if err != nil {
+		return n, err
+	}
+	return n, nil
 }
-
-// func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
-// 	if w.WriterState != WritingBody {
-// 		return 0, fmt.Errorf("invalid writer state: %v", w.WriterState)
-// 	}
-
-// 	chunk_len := len(p)
-// 	if len(p) == 0 {
-// 		return w.WriteChunkedBodyDone()
-// 	}
-// 	hex_len := fmt.Sprintf("%X", chunk_len)
-// 	hexlen_bytes := []byte(hex_len + "\r\n")
-// 	n1, err := w.Write(hexlen_bytes)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	n2, err := w.Write(p)
-// 	if err != nil {
-// 		return n1, err
-// 	}
-// 	return n1 + n2, err
-// }
-
-// func (w *Writer) WriteChunkedBodyDone() (int, error) {
-// 	defer func() {
-// 		w.WriterState = Done
-// 	}()
-// 	n, err := w.Write([]byte("0\r\n\r\n"))
-// 	return n, err
-// }
