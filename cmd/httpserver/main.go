@@ -1,15 +1,18 @@
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
+	"github.com/bootdotdev/learn-http-protocol/internal/headers"
 	"github.com/bootdotdev/learn-http-protocol/internal/request"
 	"github.com/bootdotdev/learn-http-protocol/internal/response"
 	"github.com/bootdotdev/learn-http-protocol/internal/server"
@@ -118,20 +121,25 @@ func proxyHandler(w *response.Writer, req *request.Request) {
 	w.WriteStatusLine(response.StatusCodeSuccess)
 	h := response.GetDefaultHeaders(0)
 	h.Override("Transfer-Encoding", "chunked")
+	h.Set("Trailer", "X-Content-SHA256")
+	h.Set("Trailer", "X-Content-Length")
 	h.Remove("Content-Length")
 	w.WriteHeaders(h)
 
 	const maxChunkSize = 1024
+	fullbody := make([]byte, 0, maxChunkSize)
 	buffer := make([]byte, maxChunkSize)
 	for {
 		n, err := resp.Body.Read(buffer)
 		fmt.Println("Read", n, "bytes")
 		if n > 0 {
-			_, err = w.WriteChunkedBody(buffer[:n])
+			buf_slice := buffer[:n]
+			_, err = w.WriteChunkedBody(buf_slice)
 			if err != nil {
 				fmt.Println("Error writing chunked body:", err)
 				break
 			}
+			fullbody = append(fullbody, buf_slice...)
 		}
 		if err == io.EOF {
 			break
@@ -142,6 +150,13 @@ func proxyHandler(w *response.Writer, req *request.Request) {
 		}
 	}
 	_, err = w.WriteChunkedBodyDone()
+	hash_body := sha256.Sum256(fullbody)
+	body_len := len(fullbody)
+	trailers := headers.NewHeaders()
+	trailers.Set("X-Content-SHA256", fmt.Sprintf("%x", hash_body))
+	trailers.Set("X-Content-Length", strconv.Itoa(body_len))
+	err = w.WriteTrailers(trailers)
+
 	if err != nil {
 		fmt.Println("Error writing chunked body done:", err)
 	}
