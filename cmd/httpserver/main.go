@@ -1,9 +1,13 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/bootdotdev/learn-http-protocol/internal/request"
@@ -12,6 +16,7 @@ import (
 )
 
 const port = 42069
+const httpbin_prefix = "/httpbin/stream/"
 
 func main() {
 	server, err := server.Serve(port, handler)
@@ -27,7 +32,49 @@ func main() {
 	log.Println("Server gracefully stopped")
 }
 
+// and strings.TrimPrefix
 func handler(w *response.Writer, req *request.Request) {
+	if strings.HasPrefix(req.RequestLine.RequestTarget, httpbin_prefix) {
+		fmt.Println("here!!")
+		numstr := strings.TrimPrefix(req.RequestLine.RequestTarget, httpbin_prefix)
+		h := response.GetDefaultChunkHeaders()
+		fmt.Println(h)
+		w.WriteHeaders(h)
+		fmt.Println("req!!")
+		res, err := http.Get(fmt.Sprintf("https://httpbin.org/stream/%s", numstr))
+		if err != nil {
+			handler500(w, req)
+			return
+		}
+		fmt.Println("req made!!")
+		// buf := make([]byte,1024)
+		// for {
+		// 	n,err:= res.Body.Read(buf)
+		// 	w.WriteChunkedBody(n)
+		// 	buf = buf[:0]
+		// }
+		buf := make([]byte, 1024)
+		for {
+			n, err := res.Body.Read(buf)
+			if n > 0 {
+				// Only send actual data read
+				_, writeErr := w.WriteChunkedBody(buf[:n])
+				if writeErr != nil {
+					break // client disconnected or other issue
+				}
+			}
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				// Log or return 500 optionally
+				break
+			}
+		}
+
+		// Final chunk to indicate end of body
+		w.WriteChunkedBodyDone()
+	}
 	if req.RequestLine.RequestTarget == "/yourproblem" {
 		handler400(w, req)
 		return

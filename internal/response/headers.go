@@ -13,3 +13,11 @@ func GetDefaultHeaders(contentLen int) headers.Headers {
 	h.Set("Content-Type", "text/plain")
 	return h
 }
+
+func GetDefaultChunkHeaders() headers.Headers {
+	h := headers.NewHeaders()
+	h.Set("Connection", "keep-alive")
+	h.Set("Content-Type", "text/plain")
+	h.Set("Transfer-Encoding", "chunked")
+	return h
+}
