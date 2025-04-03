@@ -38,6 +38,11 @@ func handler(w *response.Writer, req *request.Request) {
 		proxyHandler(w, req)
 		return
 	}
+	if req.RequestLine.RequestTarget == "/video" {
+		videoHandler(w, req)
+		return
+	}
+
 	if req.RequestLine.RequestTarget == "/yourproblem" {
 		handler200(w, req)
 		return
@@ -106,6 +111,24 @@ func handler200(w *response.Writer, _ *request.Request) {
 	return
 }
 
+// Add a new handler that responds to the GET /video endpoint with the video file.
+// Use the Content-Type: video/mp4 header.
+// I used os.ReadFile to just read the whole file into memory (probably not the most efficient, but works for our demo).
+func videoHandler(w *response.Writer, req *request.Request) {
+	dir, _ := os.Getwd()
+	fmt.Println("Current working directory:", dir)
+	fileb, err := os.ReadFile("./assets/vim.mp4")
+	if err != nil {
+		fmt.Println(err)
+		handler500(w, req)
+		return
+	}
+	w.WriteStatusLine(response.StatusCodeSuccess)
+	h := response.GetDefaultHeaders(len(fileb))
+	h.Override("Content-Type", "video/mp4")
+	w.WriteHeaders(h)
+	w.WriteBody(fileb)
+}
 func proxyHandler(w *response.Writer, req *request.Request) {
 	target := strings.TrimPrefix(req.RequestLine.RequestTarget, "/httpbin/")
 	url := "https://httpbin.org/" + target
