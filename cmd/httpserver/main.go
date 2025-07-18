@@ -17,7 +17,7 @@ import (
 	"github.com/tiggercwh/boot-dev-httptcp/internal/server"
 )
 
-const port = 42069
+const port = 2025
 
 func main() {
 	server, err := server.Serve(port, handler)

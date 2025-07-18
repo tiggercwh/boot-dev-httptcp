@@ -6,9 +6,9 @@ This repository contains a collection of Go modules to demonstrate the fundament
 
 This project includes the following modules:
 
-- **`httpserver`**: A simple HTTP server that listens on port `42069`. It includes handlers for various routes to demonstrate different HTTP features.
-- **`tcplistener`**: A raw TCP listener on port `42069`. It accepts connections, parses incoming data as HTTP requests, and prints the request details to the console. This is useful for inspecting raw HTTP requests.
-- **`udpsender`**: A basic UDP client that sends data from standard input to `localhost:42069`.
+- **`httpserver`**: A simple HTTP server that listens on port `2025`. It includes handlers for various routes to demonstrate different HTTP features.
+- **`tcplistener`**: A raw TCP listener on port `2025`. It accepts connections, parses incoming data as HTTP requests, and prints the request details to the console. This is useful for inspecting raw HTTP requests.
+- **`udpsender`**: A basic UDP client that sends data from standard input to `localhost:2025`.
 
 ## Getting Started
 
@@ -31,13 +31,13 @@ In another terminal, you can use `curl` to send requests to it.
 **Example: Get a successful response**
 
 ```bash
-curl -v http://localhost:42069/normalreq
+curl -v http://localhost:2025/normalreq
 ```
 
 **Example: Get an error response**
 
 ```bash
-curl -v http://localhost:42069/myproblem
+curl -v http://localhost:2025/myproblem
 ```
 
 **Example: Use the httpbin proxy**
@@ -45,7 +45,7 @@ curl -v http://localhost:42069/myproblem
 This will proxy your request to `https://httpbin.org/get`.
 
 ```bash
-curl -v http://localhost:42069/httpbin/get
+curl -v http://localhost:2025/httpbin/get
 ```
 
 ### Visualizing `tcplistener`
@@ -59,7 +59,7 @@ go run ./cmd/tcplistener
 In another terminal, send an HTTP request using `curl`. The `-v` flag shows the request being sent.
 
 ```bash
-curl -v -X POST -d "hello world" http://localhost:42069/foo
+curl -v -X POST -d "hello world" http://localhost:2025/foo
 ```
 
 The `tcplistener` terminal will print the raw request it received, for example:
@@ -76,10 +76,10 @@ Connection to  127.0.0.1:54622 closed
 
 To see the output of the `udpsender`, you can use `netcat` (`nc`) to act as a UDP server.
 
-In one terminal, start `netcat` to listen for UDP packets on port `42069`:
+In one terminal, start `netcat` to listen for UDP packets on port `2025`:
 
 ```bash
-nc -ul -p 42069
+nc -ul -p 2025
 ```
 
 In another terminal, run the `udpsender`:

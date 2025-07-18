@@ -8,7 +8,7 @@ import (
 	"github.com/tiggercwh/boot-dev-httptcp/internal/request"
 )
 
-const port = ":42069"
+const port = ":2025"
 
 func main() {
 	listener, err := net.Listen("tcp", port)

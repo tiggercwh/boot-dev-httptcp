@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	udpAddr, err := net.ResolveUDPAddr("udp", "localhost:42069")
+	udpAddr, err := net.ResolveUDPAddr("udp", "localhost:2025")
 	if err != nil {
 		log.Fatalf("error: %s\n", err.Error())
 	}
