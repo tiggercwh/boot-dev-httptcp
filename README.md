@@ -1,4 +1,4 @@
-# Learn HTTP Protocol
+# Multiple protocols demo in Go
 
 This repository contains a collection of Go modules to demonstrate the fundamentals of the HTTP protocol, TCP, and UDP.
 
