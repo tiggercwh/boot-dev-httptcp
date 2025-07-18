@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bootdotdev/learn-http-protocol/internal/headers"
+	"github.com/tiggercwh/boot-dev-httptcp/internal/headers"
 )
 
 type writerState int

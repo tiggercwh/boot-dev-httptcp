@@ -3,7 +3,7 @@ package response
 import (
 	"fmt"
 
-	"github.com/bootdotdev/learn-http-protocol/internal/headers"
+	"github.com/tiggercwh/boot-dev-httptcp/internal/headers"
 )
 
 func GetDefaultHeaders(contentLen int) headers.Headers {

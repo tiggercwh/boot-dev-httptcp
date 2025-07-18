@@ -6,8 +6,8 @@ import (
 	"net"
 	"sync/atomic"
 
-	"github.com/bootdotdev/learn-http-protocol/internal/request"
-	"github.com/bootdotdev/learn-http-protocol/internal/response"
+	"github.com/tiggercwh/boot-dev-httptcp/internal/request"
+	"github.com/tiggercwh/boot-dev-httptcp/internal/response"
 )
 
 type Handler func(w *response.Writer, req *request.Request)

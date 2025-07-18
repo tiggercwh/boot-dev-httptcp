@@ -5,7 +5,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/bootdotdev/learn-http-protocol/internal/request"
+	"github.com/tiggercwh/boot-dev-httptcp/internal/request"
 )
 
 const port = ":42069"

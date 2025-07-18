@@ -1,4 +1,4 @@
-module github.com/bootdotdev/learn-http-protocol
+module github.com/tiggercwh/boot-dev-httptcp
 
 go 1.23.0
 

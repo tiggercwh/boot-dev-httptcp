@@ -11,10 +11,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/bootdotdev/learn-http-protocol/internal/headers"
-	"github.com/bootdotdev/learn-http-protocol/internal/request"
-	"github.com/bootdotdev/learn-http-protocol/internal/response"
-	"github.com/bootdotdev/learn-http-protocol/internal/server"
+	"github.com/tiggercwh/boot-dev-httptcp/internal/headers"
+	"github.com/tiggercwh/boot-dev-httptcp/internal/request"
+	"github.com/tiggercwh/boot-dev-httptcp/internal/response"
+	"github.com/tiggercwh/boot-dev-httptcp/internal/server"
 )
 
 const port = 42069
