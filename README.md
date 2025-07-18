@@ -31,7 +31,7 @@ In another terminal, you can use `curl` to send requests to it.
 **Example: Get a successful response**
 
 ```bash
-curl -v http://localhost:42069/yourproblem
+curl -v http://localhost:42069/normalreq
 ```
 
 **Example: Get an error response**
